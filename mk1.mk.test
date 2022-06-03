@@ -1,0 +1,44 @@
+TARGETS = main1 main2
+SRCDIR = .
+SRC = $(wildcard $(SRCDIR)/*.c)
+DEPDIR = dep
+DEPFLAGS = -MM
+CC=gcc
+OBJDIR = obj
+CFLAGS = -O0 -Wall -g
+OBJ := $(addprefix $(OBJDIR)/,$(notdir $(SRC:.c=.o)))
+DEPFILES := $(SRC:%.c=$(DEPDIR)/%.d)
+-include $(wildcard $(DEPFILES))
+
+
+MKOBJDIR := $(shell mkdir -p $(OBJDIR))
+
+MKDEPDIR := $(shell mkdir -p $(DEPDIR))
+
+$(TARGETS): %: $(OBJDIR)/%.o
+	@set -e;
+	echo $*
+	echo $^
+	$(CC) $< -o $@ 
+
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	@set -e;
+	@echo $@
+	$(CC) $(CFLAGS) -c $< $(OUTPUT_OPTION) -o $@
+	$(CC) $(DEPFLAGS) $(CFLAGS) $(SRCDIR)/$*.c >  $(DEPDIR)/$*.d
+	@mv -f $(DEPDIR)/$*.d $(DEPDIR)/$*.d.tmp
+	@sed -e 's|.*:|$*.o:|' < $(DEPDIR)/$*.d.tmp > $(DEPDIR)/$*.d
+	@sed -e 's/.*://' -e 's/\\$$//' < $(DEPDIR)/$*.d.tmp | fmt -1 | \
+		sed -e 's/^ *//' -e 's/$$/:/' >> $(DEPDIR)/$*.d
+	@rm -f $(DEPDIR)/$*.d.tmp
+
+
+#$(DEPDIR)/%.d: $(SRCDIR)/%.c (SRCDIR)/%.h
+#	$(CC) $(CFLAGS) -c $< $(OUTPUT_OPTION) -o $*.o
+
+
+clean:
+	rm -f $(SRCDIR)/*.d* $(SRCDIR)/*.o $(TARGETS)
+	rm -rf $(OBJDIR) 
+	rm -rf $(DEPDIR)
